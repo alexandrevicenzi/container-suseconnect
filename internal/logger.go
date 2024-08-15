@@ -16,36 +16,39 @@ package containersuseconnect
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
 
 // The default path for the logger if nothing has been specified.
-var defaultLogPath = "/var/log/suseconnect.log"
+const DefaultLogPath = "/var/log/suseconnect.log"
 
-// The environment variable used to specify a custom path for the logger
-// path.
-const logEnv = "SUSECONNECT_LOG_FILE"
+// The environment variable used to specify a custom path for the log file.
+const LogEnv = "SUSECONNECT_LOG_FILE"
 
-// GetLoggerFile returns the output file for the logger. If the `logEnv` environment
-// variable has been set, it will try to output there. Otherwise, it
-// will try to output to the file as given in `defaultLogPath`. If
-// everything fails, it will just output to the standard error channel.
-func GetLoggerFile() *os.File {
-	// Determine the path to be used.
-	var path string
-	if env := os.Getenv(logEnv); env != "" {
-		path = env
-	} else {
-		path = defaultLogPath
+// GetLogPath returns the log file path. If the `LogEnv` environment
+// variable has been set, it will return its value if not empty.
+// Otherwise, it return `DefaultLogPath`.
+func GetLogPath() string {
+	if env := os.Getenv(LogEnv); env != "" {
+		return env
 	}
 
-	// If it's writable, use the given file, otherwise use os.Stderr.
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+	return DefaultLogPath
+}
+
+func SetLoggerOutput() {
+	path := GetLogPath()
+	logFile, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+
 	if err == nil {
-		return f
+		writter := io.MultiWriter(os.Stderr, logFile)
+		log.SetOutput(writter)
+	} else {
+		log.SetOutput(os.Stderr)
+		log.Printf("Failed to set up log file '%s': %v\n", path, err)
 	}
-	return os.Stderr
 }
 
 // Log the given formatted string with its parameters, and return it

@@ -15,40 +15,108 @@
 package containersuseconnect
 
 import (
+	"bytes"
+	"errors"
+	"log"
 	"os"
+	"strings"
 	"testing"
 )
 
-// The helper for testing the logger setup where:
-//
-//   - env: the value for the `logEnv` environment value.
-//   - expected: the expected path of the logger.
-//   - cleanup: whether the file has to be closed and removed.
-func testLogger(t *testing.T, env, expected string, cleanup bool) {
-	os.Setenv(logEnv, env)
-	f := GetLoggerFile()
-	if f.Name() != expected {
-		t.Fatalf("Wrong file")
-	}
+func TestGetLogPathDefault(t *testing.T) {
+	// Ensure no variable is set
+	os.Unsetenv(LogEnv)
 
-	if cleanup {
-		f.Close()
-		err := os.Remove(f.Name())
-		if err != nil {
-			t.Fatalf("Problem when cleaning up")
-		}
+	path := GetLogPath()
+
+	if path != DefaultLogPath {
+		t.Fatalf("Wrong log file path.\n\tExpected: %s\n\tGot: %s", DefaultLogPath, path)
 	}
 }
 
-func TestSetupLoggerDefault(t *testing.T) {
-	defaultLogPath = "suseconnect.log"
-	testLogger(t, "", defaultLogPath, true)
+func TestGetLogPathCustom(t *testing.T) {
+	if err := os.Setenv(LogEnv, "/tmp/file.log"); err != nil {
+		t.Fatalf("Failed to set log file: %v", err)
+	}
+
+	file := GetLogPath()
+	expected := "/tmp/file.log"
+
+	if file != expected {
+		t.Fatalf("Wrong log file path.\n\tExpected: %s\n\tGot: %s", expected, file)
+	}
 }
 
-func TestSetupLoggerCustom(t *testing.T) {
-	testLogger(t, "suse.log", "suse.log", true)
+// Ensure that the log is always written to a file and Stderr.
+func TestSetLoggerOutputToFile(t *testing.T) {
+	tempFile, err := os.CreateTemp("", "suse.log")
+
+	if err != nil {
+		log.Fatalf("Failed to create temp log file: %v", err)
+	}
+
+	defer os.Remove(tempFile.Name())
+
+	if err = os.Setenv(LogEnv, tempFile.Name()); err != nil {
+		t.Fatalf("Failed to set log file: %v", err)
+	}
+
+	defer os.Unsetenv(LogEnv)
+
+	logLine := "This in a log entry in a file and Stderr"
+
+	stdData, err := captureStderr(t, func() {
+		SetLoggerOutput()
+		log.Println(logLine)
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to capture Stderr: %v", err)
+	}
+
+	buff := new(bytes.Buffer)
+
+	if _, err := buff.ReadFrom(tempFile); err != nil {
+		t.Fatalf("Failed to read temp file: %v", err)
+	}
+
+	fileData := buff.String()
+
+	if !strings.Contains(fileData, logLine) {
+		t.Fatalf("Wrong log file content. Unable to find the line: %s", logLine)
+	}
+
+	if !strings.Contains(stdData, logLine) {
+		t.Fatalf("Wrong Stderr content. Unable to find the line: %s", logLine)
+	}
 }
 
-func TestLoggerStdErr(t *testing.T) {
-	testLogger(t, "/var/log/suse.log", os.Stderr.Name(), false)
+// Ensure that if the log file is not writable it still writtes to Stderr.
+func TestSetLoggerOutputToStderr(t *testing.T) {
+	path := "/path/that/does/not/exists/suse.log"
+
+	if err := os.Setenv(LogEnv, path); err != nil {
+		t.Fatalf("Failed to set log file: %v", err)
+	}
+
+	defer os.Unsetenv(LogEnv)
+
+	logLine := "This in not a log entry in a file"
+
+	data, err := captureStderr(t, func() {
+		SetLoggerOutput()
+		log.Println(logLine)
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to capture Stderr: %v", err)
+	}
+
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("Log file was written")
+	}
+
+	if !strings.Contains(data, logLine) {
+		t.Fatalf("Wrong Stderr content. Unable to find the line: %s", logLine)
+	}
 }
