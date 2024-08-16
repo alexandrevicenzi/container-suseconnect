@@ -1,0 +1,12 @@
+#!/bin/sh
+
+go mod verify
+
+SCRIPTDIR=$(dirname $0)
+
+$SCRIPTDIR/formatting
+$SCRIPTDIR/vet
+$SCRIPTDIR/staticcheck
+$SCRIPTDIR/unittest
+$SCRIPTDIR/coverage
+$SCRIPTDIR/build
