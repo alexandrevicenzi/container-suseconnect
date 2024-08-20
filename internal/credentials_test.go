@@ -17,57 +17,77 @@ package containersuseconnect
 import (
 	"bytes"
 	"log"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestCredentials(t *testing.T) {
+func TestCredentialsSeparator(t *testing.T) {
+	cr := &Credentials{}
+	assert.EqualValues(t, '=', cr.separator())
+}
+
+func TestCredentialsNoUsernameNoPassword(t *testing.T) {
 	cr := &Credentials{}
 
-	if cr.separator() != '=' {
-		t.Fatal("Wrong separator")
-	}
+	prepareLogger()
+
+	err := cr.afterParseCheck()
+	msg := "Can't find username and password"
+	assert.EqualError(t, err, msg)
+
+	shouldHaveLogged(t, msg)
+}
+
+func TestCredentialsNoUsername(t *testing.T) {
+	cr := &Credentials{}
+	cr.setValues("password", "1234")
+
 	prepareLogger()
 	err := cr.afterParseCheck()
 	msg := "Can't find username"
-	if err == nil || err.Error() != msg {
-		t.Fatal("Wrong error")
-	}
-	shouldHaveLogged(t, msg)
+	assert.EqualError(t, err, msg)
 
+	shouldHaveLogged(t, msg)
+}
+
+func TestCredentialsNoUPassword(t *testing.T) {
+	cr := &Credentials{}
 	cr.setValues("username", "suse")
+
 	prepareLogger()
-	msg = "Can't find password"
-	err = cr.afterParseCheck()
-	if err == nil || err.Error() != msg {
-		t.Fatal("Wrong error")
-	}
+	err := cr.afterParseCheck()
+	msg := "Can't find password"
+	assert.EqualError(t, err, msg)
+
 	shouldHaveLogged(t, msg)
+}
 
+func TestCredentialsValid(t *testing.T) {
+	cr := &Credentials{}
+	cr.setValues("username", "suse")
 	cr.setValues("password", "1234")
-	err = cr.afterParseCheck()
-	if err != nil {
-		t.Fatal("There should not be an error")
-	}
+	err := cr.afterParseCheck()
+	assert.Nil(t, err)
+}
 
-	locs := cr.locations()
-	if locs[0] != "/etc/zypp/credentials.d/SCCcredentials" {
-		t.Fatal("Wrong location")
-	}
-	if locs[1] != "/run/secrets/SCCcredentials" {
-		t.Fatal("Wrong location")
-	}
-	if locs[2] != "/run/secrets/credentials.d/SCCcredentials" {
-		t.Fatal("Wrong location")
-	}
+func TestCredentialsInvalidKey(t *testing.T) {
+	cr := &Credentials{}
 
-	// It should log a proper warning.
 	buffer := bytes.NewBuffer([]byte{})
 	log.SetOutput(buffer)
-	cr.setValues("unknown", "value")
-	if !strings.Contains(buffer.String(), "Warning: Unknown key 'unknown'") {
-		t.Fatal("Wrong warning!")
-	}
+	cr.setValues("bad", "value")
+
+	assert.Contains(t, buffer.String(), "Warning: Unknown key 'bad'")
+}
+
+func TestCredentialsLocations(t *testing.T) {
+	cr := &Credentials{}
+	locs := cr.locations()
+
+	assert.Contains(t, locs, "/etc/zypp/credentials.d/SCCcredentials")
+	assert.Contains(t, locs, "/run/secrets/SCCcredentials")
+	assert.Contains(t, locs, "/run/secrets/credentials.d/SCCcredentials")
 }
 
 // In the following test we will create a mock that just wraps up the

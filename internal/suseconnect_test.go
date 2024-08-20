@@ -32,7 +32,7 @@ func TestSUSEConnectData(t *testing.T) {
 	if err != nil {
 		t.Fatal("There should not be an error")
 	}
-	if data.SccURL != sccURLStr {
+	if data.SccURL != defaultSCCURL {
 		t.Fatal("The URL should be the one from sccURLstr")
 	}
 

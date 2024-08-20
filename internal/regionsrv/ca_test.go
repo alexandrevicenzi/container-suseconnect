@@ -51,8 +51,6 @@ func fixturesPath(file string) string {
 	return filepath.Join(path, "fixtures", file)
 }
 
-// Tests start here
-
 func TestNoUpdateIsNeeded(t *testing.T) {
 	beforeTest()
 
@@ -88,7 +86,7 @@ func TestSafeCAFileBadWrite(t *testing.T) {
 	beforeTest()
 
 	hashFilePath = fixturesPath(fmt.Sprintf("file%v.md5", rand.Int()))
-	caFilePath = "/wubalubadubdub"
+	caFilePath = "/path/that/does/not/exist/file"
 	cmd := testCommand{shouldFail: false}
 
 	err := safeCAFile(cmd, "valid")

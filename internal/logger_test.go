@@ -50,5 +50,5 @@ func TestSetupLoggerCustom(t *testing.T) {
 }
 
 func TestLoggerStdErr(t *testing.T) {
-	testLogger(t, "/var/log/suse.log", os.Stderr.Name(), false)
+	testLogger(t, "/path/that/does/not/exists/suse.log", os.Stderr.Name(), false)
 }

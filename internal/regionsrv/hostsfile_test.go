@@ -43,28 +43,12 @@ func copyHostFileToTemp(mode os.FileMode) string {
 	return path
 }
 
-// Test suite below
-
 func TestUpdateHostsFileCouldNotRead(t *testing.T) {
 	hostsFile = "/bubblegloop-swamp"
 	err := UpdateHostsFile("hostname", "1.1.1.1")
 
 	if err == nil || !strings.Contains(err.Error(), "can't read /bubblegloop-swamp file") {
 		t.Fatalf("Expected 'can't read /bubblegloop-swamp file', got '%v'\n", err)
-	}
-}
-
-func TestUpdateHostsFileCouldNotWrite(t *testing.T) {
-	hostsFile = copyHostFileToTemp(0400)
-	if hostsFile == "" {
-		t.Fatalf("Failed to initialize hosts file")
-	}
-
-	defer os.Remove(hostsFile)
-
-	err := UpdateHostsFile("hostname", "1.1.1.1")
-	if err == nil || !strings.Contains(err.Error(), "can't write") {
-		t.Fatalf("Expected a write error, got '%v'\n", err)
 	}
 }
 

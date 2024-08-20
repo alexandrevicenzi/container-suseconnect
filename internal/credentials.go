@@ -70,6 +70,9 @@ func (cr *Credentials) setValues(key, value string) {
 }
 
 func (cr *Credentials) afterParseCheck() error {
+	if cr.Username == "" && cr.Password == "" {
+		return loggedError(GetCredentialsError, "Can't find username and password")
+	}
 	if cr.Username == "" {
 		return loggedError(GetCredentialsError, "Can't find username")
 	}

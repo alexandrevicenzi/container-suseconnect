@@ -19,13 +19,18 @@ import (
 )
 
 const (
-	sccURLStr = "https://scc.suse.com"
+	defaultSCCURL = "https://scc.suse.com"
+)
+
+var (
+	defaultSCCConfigPaths = []string{"/etc/SUSEConnect", "/run/secrets/SUSEConnect"}
 )
 
 // SUSEConnectData has all the relevant data from SUSEConnect.
 type SUSEConnectData struct {
-	SccURL   string
-	Insecure bool
+	SccURL      string
+	Insecure    bool
+	ConfigPaths []string
 }
 
 func (data *SUSEConnectData) separator() byte {
@@ -33,11 +38,14 @@ func (data *SUSEConnectData) separator() byte {
 }
 
 func (data *SUSEConnectData) locations() []string {
-	return []string{"/etc/SUSEConnect", "/run/secrets/SUSEConnect"}
+	if len(data.ConfigPaths) > 0 {
+		return data.ConfigPaths
+	}
+	return defaultSCCConfigPaths
 }
 
 func (data *SUSEConnectData) onLocationsNotFound() bool {
-	data.SccURL = sccURLStr
+	data.SccURL = defaultSCCURL
 	return true
 }
 
@@ -53,7 +61,7 @@ func (data *SUSEConnectData) setValues(key, value string) {
 
 func (data *SUSEConnectData) afterParseCheck() error {
 	if data.SccURL == "" {
-		data.SccURL = sccURLStr
+		data.SccURL = defaultSCCURL
 	}
 	return nil
 }
